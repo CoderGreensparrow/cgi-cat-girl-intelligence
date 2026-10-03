@@ -1,0 +1,313 @@
+# FILE: CGI (Cat Girl Intelligence)
+# VERSION: prototype v0.1.1
+
+"""
+SPECIFICATION:
+CGI (Cat Girl Intelligence) is a simple question-answer program, similar but different from 1960s ELIZA.
+It answers everything with some specified word embedded as the answer.
+That word is "meow" by default.
+- Wh- questions get answered with meow:
+    - "What?" "Meow."
+    - "Who?" "Meow."
+    - "Why?" "Because of meowing."
+    - "When?" "At meow."
+    - "When are we going?" "We are going at meow."
+    - "When is the party?" "The party is at meow."
+    - "Who is that?" "That is meow."
+    - "Who are we watching?" "We are watching meow."
+    - "Who are we thinking about?" "We are thinking about meow."
+    - "Why are we thinking?" "We are thinking because of meowing."
+    - "Why are we walking by the seashore?" "We are walking by the seashore because of meowing."
+    - "What are we doing?" "We are doing meow."
+    - "What is the dog doing?" "The dog is doing meow."
+    - "What is that?" "That is meow."
+    - "What is that doing?" "That is doing meow."
+    - "What is that doing over there?" "That is doing meow over there."
+    - "What are we doing over there?" "We are doing meow over there."
+    - "What are you doing over there?" "I am doing meow over there."
+    - "What do you like doing?" "I like doing meow."
+    - "Who does that?" "Meow does that."
+    - "Who do we think?" "We think meow."
+    - "What are you thinking about doing?" "I am thinking about doing meow."
+    - "What are you thinking about doing over there?" "I am thinking about doing meow over there."
+    - "Where are you thinking about sleeping at Johnson's?" "I am thinking about sleeping at meow at Johnson's."
+    - "What am I thinking?" "You are thinking meow."
+    - "Who am I?" "You are meow."
+    - "Why am I?" "You are because of meowing."
+    - "Who likes me?" "Meow likes you."
+    - "What makes a loud purring noise?" "Meow makes a loud purring noise?"
+    - "What does he do?" "He does meow?"
+    - "What does he do for a living?" "He does meow for a living?"
+    - "What do you think?" "I think meow."
+    - "How do you do?" "I do meowing."
+    - "How do you do it?" "I do it meowing."
+    - "How are you?" "I am meowing."
+    - "Where do you sleep?" "I sleep at meow."
+    - "Where do you do your chores?" "I do my chores at meow."
+
+    The handling of other tenses comes later. At first, I only do Present Simple and Present Continuous.
+    [- "How did you do?" "I did meowing."
+    - "When did we go?" "We went at meow."
+    - "Who liked me?" "Meow liked you."
+    - "Why were we walking by the seashore?" "We were walking by the seashore because of meowing."
+    - "Why did we walk by the seashore?" "We walked by the seashore because of meowing."
+
+    - "Where will you have been thinking about sleeping at Johnson's?" "I will have been thinking about sleeping at meow at Johnson's."]
+    STRUCTURAL ANALYSIS:
+    - WH BE SUBJ (COMPLEMENT1) (LAST -ing VERB) (COMPLEMENT2) -> SUBJ(INVERSE) BE(MATCHING) (COMPLEMENT1) (LAST -ing VERB) MEOW-ANSWER (COMPLEMENT2)
+    - WH DO SUBJ VERB COMPLEMENT -> SUBJ(INVERSE) VERB(MATCHING) COMPLEMENT MEOW-ANSWER
+    - WH VERBS COMPLEMENT -> MEOW-ANSWER VERBS COMPLEMENT
+    - MEOW-ANSWERS:
+        - What, who -> meow
+        - When, where -> at meow
+        - Why -> because of meowing
+        - Which -> meow
+        - How -> meowing
+- Yes/No questions - everything is answered randomly with "Yes, meow." or "No, meow."
+    - "Do you like tea?" "Yes, meow."
+    - "Is there a tower?" "No, meow."
+    - "Are we philosophical?" "Yes, meow."
+    - "Do you like me?" "No, meow." "Really?" "No, meow."
+- Unrecognized grammatical structures, if detected, are answered with random affirmations, or questioned:
+    - "Unequivocally speaking, programming is a difficult task." "That's meow!"
+    - "The clouds are nice." "Me-ow!"
+    - "That is not correct." "Yes, meow!"
+    - "Interesting..." "Why, meow?"
+    - "I like it." "Meow?"
+
+
+PROJECT STATE:
+Can handle reversing subject and be, cannot handle reversing verb. It also cannot handle LIKE TO VERB structures (it handles them wrong).
+Which means only the first 2 sentence structures have been semi-implemented.
+"""
+
+import re
+
+def de_abbreviate_words(words: list) -> list:
+    abbr = {
+        "i'm": ["i", "am"],
+        "you're": ["you", "are"],
+        "he's": ["he", "is"],
+        "she's": ["she", "is"],
+        "it's": ["it", "is"],
+        "we're": ["we", "are"],
+        "they're": ["they", "are"],
+        "what's": ["what", "is"],
+        "who's": ["who", "is"],
+        "when's": ["when", "is"],
+        "where's": ["where", "is"],
+        "which's": ["which", "is"],
+        "how's": ["how", "is"],
+        "whatcha": ["what", "are", "you"],
+        "whutcha": ["what", "are", "you"],
+        "ya": ["you"],
+        #  "don't": ["do", "not"],
+        "what're": ["what", "are"]
+    }
+    new_words = []
+    for word in words:
+        if word in abbr.keys():
+            new_words.extend(abbr[word])
+        else:
+            new_words.append(word)
+    return new_words
+
+def analyze(sentence):
+    if sentence == "":
+        return "Meow?"
+
+    NOMINATIVE_PRONOUNS = ("i", "you", "he", "she", "it", "we", "they")
+    REPLACEMENT_ANSWERS = {
+        "what": "meow",
+        "who": "Meow",
+        "when": "at meow",
+        "why": "because of meowing",
+        "where": "at Meow",
+        "which": "meow",
+        "how": "meowly"
+    }
+    BODGED_RESULT_MEOW = "meow"  # when regex matching and REPLACEMENT_ANSWERS wh-word matching fails, this is the replacement answer
+    REVERSE_SUBJECT = {  # when given a SUBJ, it spits out REVERSE_SUBJ
+        "i": "you",
+        "you": "I",  # has to be capitalized, as there is no algorithm for capitalizing I.
+    }  # if not in list, use original
+    REVERSE_BE_BY_REVERSE_SUBJ = {  # when given REVERSE_SUBJ, it spits out the correct be (which will be used by REVERSE_BE): reverse be matcher
+        "I": "am",
+        "you": "are"
+    }  # this is actually MATCH_BE_TO_REVERSED_SUBJ
+    REGEX_FLAGS = re.IGNORECASE | re.UNICODE
+    REGEX = [
+        {
+            "ID": "WH BE SUBJ C1? ING? C2?",
+            "regex": re.compile(
+                r"^(?P<wh>Wh(?:at|o|en|ere|y|ich)|How)\s+(?P<be>am|are|is)\s+(?P<subj>I|you|s?he|it|we|they|this|that|the\s+\S+(?:\s+of\s+(?:the\s+)?\S+)?)(?:(?P<c1>(?:\s+\S+)*(?=\s+\w+ing))?(?P<ing>\s+\w+ing)?(?P<c2>(?:\s+\S+)*)(?<!\?))\??$",
+                REGEX_FLAGS
+            ),
+            "replacement_patterns_per_wh_word_matching": [
+                {
+                    "wh_words": ["what", "who", "where"],
+                    "replacement": "{REVERSE_SUBJ} {REVERSE_BE}{C1}{ING} {MEOW}{C2}."
+                },
+                {
+                    "wh_words": ["why", "which", "how"],
+                    "replacement": "{REVERSE_SUBJ} {REVERSE_BE}{C1}{ING}{C2} {MEOW}."
+                }
+            ]
+        },
+        {
+            "ID": "WH DO SUBJ VERB C1?",
+            "regex": re.compile(
+                r"^(?P<wh>Wh(?:at|o|en|ere|y|ich)|How)\s+(?P<do>do(?:es)?)\s+(?P<subj>I|you|s?he|it|we|they|this|that|the\s+\S+(?:\s+of\s+(?:the\s+)?\S+)?)\s+(?P<verb>\w+)(?P<c1>(?:\s+\S+)*)(?<!\?)\??$",
+                REGEX_FLAGS
+            ),
+            "replacement_patterns_per_wh_word_matching": [
+                {
+                    "wh_words": ["what", "who", "where"],
+                    "replacement": "{REVERSE_SUBJ} {VERB} {MEOW}{C1}."
+                },
+                {
+                    "wh_words": ["why", "which", "how"],
+                    "replacement": "{REVERSE_SUBJ} {VERB}{C1} {MEOW}."  # TODO: MATCH VERB TO REVERSE_SUBJ
+                }
+            ]
+        }
+    ]
+    PUNCTUATION = ("?", ".", "!", ",", ";")
+
+    sentence = sentence.lower()
+    sentence_type = "unknown."  # sentence_type includes the punctuation at the end
+    match sentence[-1]:
+        case "?":
+            sentence_type = "question?"
+        case ".":
+            sentence_type = "statement."
+        case "!":
+            sentence_type = "exclamation!"
+    for p in PUNCTUATION:
+        if sentence.count(p) >= 2 and sentence[-6:].count(p) != sentence.count(p):
+            sentence_type = "not one sentence."
+
+    raw_words = sentence
+    for to_remove in PUNCTUATION:
+        raw_words = raw_words.replace(to_remove, "")
+    words = [w.strip() for w in raw_words.split(" ")]
+    words = de_abbreviate_words(words)
+    raw_sentence = sentence  # if I ever need the original input
+    sentence = " ".join(words)
+
+    regex_result = None
+    for reg in REGEX:
+        res = reg["regex"].match(sentence)
+        if res is not None:
+            regex_result = [reg, res]
+
+    # BODGED RESULT: HANDLE NO KNOWN REGEX MATCH
+    if regex_result is None:
+        if sentence_type != "not one sentence.":
+            if words[0] in REPLACEMENT_ANSWERS.keys():
+                bodged_result = REPLACEMENT_ANSWERS[words[0]]
+            else:
+                bodged_result = BODGED_RESULT_MEOW
+            # add punctuation:
+            bodged_result += sentence_type[-1]  # the sentence_type includes the punctuation at the end used for answering bodged_result always
+            bodged_result = bodged_result.capitalize()
+        else:  # multi-sentence handling
+            # split sentences by PUNCTUATION and just say meow repeatedly to each with the same punctuations
+            punctuations_at_positions = {}
+            for p in PUNCTUATION:
+                i = 0
+                while i != -1 and i < len(raw_sentence):
+                    i = raw_sentence.find(p, i)
+                    if i != -1:
+                        punctuations_at_positions[i] = p
+                        i += 1  # start after current char (find doesn't throw an error for too high starting index)
+            bodged_result = ""
+            for i, p in sorted(punctuations_at_positions.items(), key=lambda x: x[0]):
+                bodged_result += BODGED_RESULT_MEOW.capitalize() + p + " "
+            bodged_result = bodged_result.strip()
+        return bodged_result
+
+    # PROPER RESULT: CONSTRUCT ANSWER (WH-, SUBJ AND DO ONLY)
+    reg, res = regex_result
+    string_substitutions = {}
+    # 0. preliminary raw conversion (converts the res.groupdict() to string substitutions raw)
+    for name, val in res.groupdict().items():
+        string_substitutions["{" + name.upper() + "}"] = val
+    # 1. match by wh IF THERE IS ANY and look up a response (which is string replacement/substitution pattern)
+    replacement_pattern = None
+    meow_answer = None
+    if "wh" in res.groupdict().keys():
+        wh = res.group("wh")
+        for r in reg["replacement_patterns_per_wh_word_matching"]:
+            if wh in r["wh_words"]:
+                replacement_pattern = r["replacement"]
+                break
+        # 2/a. Meow answer by wh
+        for wh_to_test_for, m in REPLACEMENT_ANSWERS.items():
+            if wh == wh_to_test_for:
+                meow_answer = m
+                break
+    if replacement_pattern is None:
+        return f"Error! Could not find correct replacement pattern for wh-word {wh} for regex match ID: {reg["ID"]}. Continuing execution."
+    if meow_answer is None:
+        return f"Error! Could not find correct meow answer for wh-word {wh} in REPLACEMENT_ANSWERS. Continuing execution."
+    string_substitutions["{MEOW}"] = meow_answer
+    # 3. reverse subj and be/verb IF NEEDED (default to not doing anything with them)
+    reverse_subject = None
+    if "subj" in res.groupdict().keys():
+        subj = res.group("subj")
+        reverse_subject = subj  # fallback default
+        if subj in REVERSE_SUBJECT.keys():
+            reverse_subject = REVERSE_SUBJECT[subj]
+    reverse_be = None
+    if "be" in res.groupdict().keys():
+        be = res.group("be")
+        reverse_be = be  # fallback default
+        if reverse_subject in REVERSE_BE_BY_REVERSE_SUBJ.keys():
+            reverse_be = REVERSE_BE_BY_REVERSE_SUBJ[reverse_subject]
+    if reverse_subject is None:
+        reverse_subject = "MISSING_REVERSE_SUBJECT"
+    if reverse_be is None:
+        reverse_be = "MISSING_REVERSE_BE"
+    string_substitutions["{REVERSE_SUBJ}"] = reverse_subject
+    string_substitutions["{REVERSE_BE}"] = reverse_be
+    # 4. SUBSTITUTE TO REPLACEMENT PATTERN
+    result = replacement_pattern
+    for name, val in string_substitutions.items():
+        result = result.replace(name, val if val is not None else "")
+
+    result = result.capitalize()
+    return result
+
+
+if __name__ == "__main__":
+    print("=== CGI (Cat Girl Intelligence) prototype v0.1.1 ===")
+    print("Type '\\help' for more information.")
+    while True:
+        in_ = input("> ")
+        if in_ == "\\help":
+            print("There are two grammatical structures supported:\n"
+    "- WH-QUESTION BE(CONJUGATED) SUBJECT (COMPLEMENT1) (the last -ING VERB) (COMPLEMENT2) (?)\n"
+    "- WH-QUESTION DO(CONJUGATED) SUBJECT VERB(any singular word) (COMPLEMENT) (?)\n"
+                  "WH-QUESTIONS supported: what, who, where, why, when, which, how\n"
+                  "SUBJECTs supported: all personal pronouns in base form, this, that, the X (of (the) Y)\n"
+                  "'Complement' just means that the software will match the rest of the words in that region regardless of their meaning.\n"
+                  "Sentences mustn't necessarily end with a question mark.\n\n"
+                  "(There can be many cases of incorrect matching to these structures.\n"
+                  "In those cases, the output will most likely be incorrect.\n"
+                  "But as we are talking about Cat Girl Intelligence, it's not a bug, it's a feature.\n"
+                  "Future versions may fix things up gradually.)\n\n"
+                  "If the given sentence doesn't match these grammatical structures, then\n"
+                  "fallback methods are employed:\n"
+                  "1. If the unknown sentence starts with a WH-WORD, then only that word is answered\n"
+                  "   and the rest of the words are completely ignored.\n"
+                  "2. If that's not the case, but only 1 sentence was given, then it asks back 'Meow' with the same tone as the given sentence\n"
+                  "   (so if the original was a question, it asks back 'Meow?').\n\n"
+                  "For all cases when there are MULTIPLE SENTENCES detected (using simple punctuation detection), then\n"
+                  "all of them get a similar 'Meow' treatment as in described in 2. However, the sentence endings are not tone-matched, but literally punctuation matched\n"
+                  "(if you end a sentence with ; it will also ask back 'Meow;').\n"
+                  "Again, you could say this is a bug, but it's not a bug, it's a feature.\n\n"
+                  "Have fun!\n"
+                  "\tNote: If you would like to play with a better chatbot akin to this one that doesn't use LLMs, check out the ELIZA program from 1966.")
+        else:
+            print(analyze(in_))
