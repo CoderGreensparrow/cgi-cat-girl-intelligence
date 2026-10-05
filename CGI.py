@@ -1,5 +1,5 @@
 # FILE: CGI (Cat Girl Intelligence)
-# VERSION: prototype v0.1.1
+VERSION_ = "prototype v0.1.2"
 
 """
 SPECIFICATION:
@@ -82,6 +82,7 @@ Which means only the first 2 sentence structures have been semi-implemented.
 """
 
 import re
+import random
 
 def de_abbreviate_words(words: list) -> list:
     abbr = {
@@ -98,11 +99,28 @@ def de_abbreviate_words(words: list) -> list:
         "where's": ["where", "is"],
         "which's": ["which", "is"],
         "how's": ["how", "is"],
+        "why's": ["why", "is"],
         "whatcha": ["what", "are", "you"],
         "whutcha": ["what", "are", "you"],
         "ya": ["you"],
         #  "don't": ["do", "not"],
-        "what're": ["what", "are"]
+        "what're": ["what", "are"],
+        "im": ["i", "am"],
+        "youre": ["you", "are"],
+        "hes": ["he", "is"],
+        "shes": ["she", "is"],
+        "theyre": ["they", "are"],
+        "whats": ["what", "is"],
+        "whos": ["who", "is"],
+        "whens": ["when", "is"],
+        "wheres": ["where", "is"],
+        "whichs": ["which", "is"],
+        "hows": ["how", "is"],
+        "whys": ["why", "is"],
+        "don't": ["do", "not"],
+        "doesn't": ["does", "not"],
+        "dont": ["do", "not"],
+        "doesnt": ["does", "not"],
     }
     new_words = []
     for word in words:
@@ -127,6 +145,7 @@ def analyze(sentence):
         "how": "meowly"
     }
     BODGED_RESULT_MEOW = "meow"  # when regex matching and REPLACEMENT_ANSWERS wh-word matching fails, this is the replacement answer
+    YES_NO_MEOW_SENTENCE_ENDING = "meow"  # used at the end of yes/no sentences to make them have a meow
     REVERSE_SUBJECT = {  # when given a SUBJ, it spits out REVERSE_SUBJ
         "i": "you",
         "you": "I",  # has to be capitalized, as there is no algorithm for capitalizing I.
@@ -136,40 +155,64 @@ def analyze(sentence):
         "you": "are"
     }  # this is actually MATCH_BE_TO_REVERSED_SUBJ
     REGEX_FLAGS = re.IGNORECASE | re.UNICODE
+    ENQUIRY_TYPE_OPEN_ENDED = "open-ended question"
+    ENQUIRY_TYPE_YES_NO_WITH_RAND_ANS = "yes/no question, random answer"
     REGEX = [
         {
-            "ID": "WH BE SUBJ C1? ING? C2?",
+            "ID": "WH BE SUBJ C1? INFINITIVE? C2?",
             "regex": re.compile(
-                r"^(?P<wh>Wh(?:at|o|en|ere|y|ich)|How)\s+(?P<be>am|are|is)\s+(?P<subj>I|you|s?he|it|we|they|this|that|the\s+\S+(?:\s+of\s+(?:the\s+)?\S+)?)(?:(?P<c1>(?:\s+\S+)*(?=\s+\w+ing))?(?P<ing>\s+\w+ing)?(?P<c2>(?:\s+\S+)*)(?<!\?))\??$",
+                # v0.1.1: r"^(?P<wh>Wh(?:at|o|en|ere|y|ich)|How)\s+(?P<be>am|are|is)\s+(?P<subj>I|you|s?he|it|we|they|this|that|the\s+\S+(?:\s+of\s+(?:the\s+)?\S+)?)(?:(?P<c1>(?:\s+\S+)*(?=\s+\w+ing))?(?P<ing>\s+\w+ing)?(?P<c2>(?:\s+\S+)*)(?<!\?))\??$",
+                r"^(?P<wh>Wh(?:at|o|en|ere|y|ich)|How)\s+(?P<be>am|are|is)\s+(?P<subj>I|you|s?he|it|we|they|this|that|the\s+\S+(?:\s+of\s+(?:the\s+)?\S+)?)(?:(?P<c1>(?:\s+\S+)*(?=\s+\w{2,}ing|\s+to\s+\w{2,}))?(?P<lastgerinf>\s+\w{2,}ing|\s+to\s+\w{2,})?(?P<c2>(?:\s+\S+)*)(?<!\?))\??$",
                 REGEX_FLAGS
             ),
             "replacement_patterns_per_wh_word_matching": [
                 {
                     "wh_words": ["what", "who", "where"],
-                    "replacement": "{REVERSE_SUBJ} {REVERSE_BE}{C1}{ING} {MEOW}{C2}."
+                    "replacement": "{REVERSE_SUBJ} {REVERSE_BE}{C1}{LASTGERINF} {MEOW}{C2}."
                 },
                 {
                     "wh_words": ["why", "which", "how"],
-                    "replacement": "{REVERSE_SUBJ} {REVERSE_BE}{C1}{ING}{C2} {MEOW}."
-                }
-            ]
+                    "replacement": "{REVERSE_SUBJ} {REVERSE_BE}{C1}{LASTGERINF}{C2} {MEOW}."
+                }  # lastgerinf is last gerund or infinitive.
+            ],
+            "type": ENQUIRY_TYPE_OPEN_ENDED
         },
         {
             "ID": "WH DO SUBJ VERB C1?",
             "regex": re.compile(
-                r"^(?P<wh>Wh(?:at|o|en|ere|y|ich)|How)\s+(?P<do>do(?:es)?)\s+(?P<subj>I|you|s?he|it|we|they|this|that|the\s+\S+(?:\s+of\s+(?:the\s+)?\S+)?)\s+(?P<verb>\w+)(?P<c1>(?:\s+\S+)*)(?<!\?)\??$",
+                # v0.1.1: r"^(?P<wh>Wh(?:at|o|en|ere|y|ich)|How)\s+(?P<do>do(?:es)?)\s+(?P<subj>I|you|s?he|it|we|they|this|that|the\s+\S+(?:\s+of\s+(?:the\s+)?\S+)?)\s+(?P<verb>\w+)(?P<c1>(?:\s+\S+)*)(?<!\?)\??$",
+                r"^(?P<wh>Wh(?:at|o|en|ere|y|ich)|How)\s+(?P<do>do(?:es)?)\s+(?P<subj>I|you|s?he|it|we|they|this|that|the\s+\S+(?:\s+of\s+(?:the\s+)?\S+)?)\s+(?P<verbs>\w{2,}(?:\s+\w{2,}ing|\s+to\s+\w{2,})?)(?P<c1>(?:\s+\S+)*)(?<!\?)\??$",
                 REGEX_FLAGS
             ),
             "replacement_patterns_per_wh_word_matching": [
                 {
                     "wh_words": ["what", "who", "where"],
-                    "replacement": "{REVERSE_SUBJ} {VERB} {MEOW}{C1}."
+                    "replacement": "{REVERSE_SUBJ} {VERBS} {MEOW}{C1}."
                 },
                 {
                     "wh_words": ["why", "which", "how"],
-                    "replacement": "{REVERSE_SUBJ} {VERB}{C1} {MEOW}."  # TODO: MATCH VERB TO REVERSE_SUBJ
+                    "replacement": "{REVERSE_SUBJ} {VERBS}{C1} {MEOW}."  # TODO: MATCH VERB TO REVERSE_SUBJ
                 }
-            ]
+            ],
+            "type": ENQUIRY_TYPE_OPEN_ENDED
+        },
+        {
+            "ID": "DO NOT1? SUBJ NOT2? VERB C1? (copy of above without WH)",
+            # depending on where the person put not (through the deabbreviator: "don't you like it" turns into "do not you like it" and still has to be detected)
+            # (but grammatically "do you not like it" is also correct)
+            "regex": re.compile(
+                r"^(?P<do>do(?:es)?)(?P<not1>\s+not)?\s+(?P<subj>I|you|s?he|it|we|they|this|that|the\s+\S+(?:\s+of\s+(?:the\s+)?\S+)?)(?P<not2>\s+not)?\s+(?P<verbs>\w{2,}(?:\s+\w{2,}ing|\s+to\s+\w{2,})?)(?P<c1>(?:\s+\S+)*)(?<!\?)\??$",
+                REGEX_FLAGS
+            ),
+            "replacement_patterns_yes_no_question": [
+                {
+                    "replacement": "Yes, {REVERSE_SUBJ} {DO}{NOT1}{NOT2} {VERBS}{C1}, {MEOW}."
+                },
+                {
+                    "replacement": "No, {REVERSE_SUBJ} {DO}{NOT1}{NOT2} not {VERBS}{C1}, {MEOW}."  # TODO: MATCH VERB TO REVERSE_SUBJ
+                }  # yes this can cause "No, I do not not like it, meow." to be answered
+            ],
+            "type": ENQUIRY_TYPE_YES_NO_WITH_RAND_ANS
         }
     ]
     PUNCTUATION = ("?", ".", "!", ",", ";")
@@ -205,12 +248,12 @@ def analyze(sentence):
     if regex_result is None:
         if sentence_type != "not one sentence.":
             if words[0] in REPLACEMENT_ANSWERS.keys():
-                bodged_result = REPLACEMENT_ANSWERS[words[0]]
+                bodged_result = REPLACEMENT_ANSWERS[words[0]] + "."
             else:
                 bodged_result = BODGED_RESULT_MEOW
-            # add punctuation:
-            bodged_result += sentence_type[-1]  # the sentence_type includes the punctuation at the end used for answering bodged_result always
-            bodged_result = bodged_result.capitalize()
+                # add punctuation:
+                bodged_result += sentence_type[-1]  # the sentence_type includes the punctuation at the end used for answering bodged_result always
+            bodged_result = bodged_result[0].upper() + bodged_result[1:]
         else:  # multi-sentence handling
             # split sentences by PUNCTUATION and just say meow repeatedly to each with the same punctuations
             punctuations_at_positions = {}
@@ -236,17 +279,21 @@ def analyze(sentence):
     # 1. match by wh IF THERE IS ANY and look up a response (which is string replacement/substitution pattern)
     replacement_pattern = None
     meow_answer = None
-    if "wh" in res.groupdict().keys():
-        wh = res.group("wh")
-        for r in reg["replacement_patterns_per_wh_word_matching"]:
-            if wh in r["wh_words"]:
-                replacement_pattern = r["replacement"]
-                break
-        # 2/a. Meow answer by wh
-        for wh_to_test_for, m in REPLACEMENT_ANSWERS.items():
-            if wh == wh_to_test_for:
-                meow_answer = m
-                break
+    if reg["type"] == ENQUIRY_TYPE_OPEN_ENDED:
+        if "wh" in res.groupdict().keys():
+            wh = res.group("wh")
+            for r in reg["replacement_patterns_per_wh_word_matching"]:
+                if wh in r["wh_words"]:
+                    replacement_pattern = r["replacement"]
+                    break
+            # 2/a. Meow answer by wh
+            for wh_to_test_for, m in REPLACEMENT_ANSWERS.items():
+                if wh == wh_to_test_for:
+                    meow_answer = m
+                    break
+    elif reg["type"] == ENQUIRY_TYPE_YES_NO_WITH_RAND_ANS:
+        replacement_pattern = random.choice(reg["replacement_patterns_yes_no_question"])["replacement"]
+        meow_answer = YES_NO_MEOW_SENTENCE_ENDING
     if replacement_pattern is None:
         return f"Error! Could not find correct replacement pattern for wh-word {wh} for regex match ID: {reg["ID"]}. Continuing execution."
     if meow_answer is None:
@@ -271,24 +318,25 @@ def analyze(sentence):
         reverse_be = "MISSING_REVERSE_BE"
     string_substitutions["{REVERSE_SUBJ}"] = reverse_subject
     string_substitutions["{REVERSE_BE}"] = reverse_be
+    # TODO: VERB REVERSE
     # 4. SUBSTITUTE TO REPLACEMENT PATTERN
     result = replacement_pattern
     for name, val in string_substitutions.items():
         result = result.replace(name, val if val is not None else "")
 
-    result = result.capitalize()
+    result = result[0].upper() + result[1:]
     return result
 
 
-if __name__ == "__main__":
-    print("=== CGI (Cat Girl Intelligence) prototype v0.1.1 ===")
+def main():
+    print(f"=== CGI (Cat Girl Intelligence) {VERSION_} ===")
     print("Type '\\help' for more information.")
     while True:
         in_ = input("> ")
         if in_ == "\\help":
             print("There are two grammatical structures supported:\n"
-    "- WH-QUESTION BE(CONJUGATED) SUBJECT (COMPLEMENT1) (the last -ING VERB) (COMPLEMENT2) (?)\n"
-    "- WH-QUESTION DO(CONJUGATED) SUBJECT VERB(any singular word) (COMPLEMENT) (?)\n"
+    "- WH-QUESTION BE[CONJUGATED] SUBJECT (COMPLEMENT1) (the last -ING VERB OR last INFINITIVE with to) (COMPLEMENT2) (question mark)\n"
+    "- WH-QUESTION DO[CONJUGATED] SUBJECT VERBS[any singular word, conjugating it is not yet implemented + -ing verb or infinitive with to] (COMPLEMENT) (question mark)\n"
                   "WH-QUESTIONS supported: what, who, where, why, when, which, how\n"
                   "SUBJECTs supported: all personal pronouns in base form, this, that, the X (of (the) Y)\n"
                   "'Complement' just means that the software will match the rest of the words in that region regardless of their meaning.\n"
@@ -311,3 +359,7 @@ if __name__ == "__main__":
                   "\tNote: If you would like to play with a better chatbot akin to this one that doesn't use LLMs, check out the ELIZA program from 1966.")
         else:
             print(analyze(in_))
+
+
+if __name__ == "__main__":
+    main()
