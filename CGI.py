@@ -337,7 +337,7 @@ def analyze(sentence):
     if reverse_be is None:
         reverse_be = "MISSING_REVERSE_BE"
     if matched_verbs is None:
-        reverse_be = "MISSING_MATCHED_VERBS"
+        matched_verbs = "MISSING_MATCHED_VERBS"
     string_substitutions["{REVERSE_SUBJ}"] = reverse_subject
     string_substitutions["{REVERSE_BE}"] = reverse_be
     string_substitutions["{MATCHED_VERBS}"] = matched_verbs
