@@ -130,6 +130,18 @@ def de_abbreviate_words(words: list) -> list:
             new_words.append(word)
     return new_words
 
+def conjugate_to_third_person(word: str):
+    word = word.strip()
+    # https://www.englishinterconnect.com/rules-for-3rd-person-singular-s/
+    if word == "have":
+        return "has"
+    elif re.match(r"^\w+(?:s|sh|ch|x|o)$", word, re.IGNORECASE | re.UNICODE):
+        return word + "es"
+    elif re.match(r"^\w+[bcdfghjklmnpqrstvwxz]y$", word, re.IGNORECASE | re.UNICODE):
+        return word.removesuffix("y") + "ies"
+    else:
+        return word + "s"
+
 def analyze(sentence):
     if sentence == "":
         return "Meow?"
@@ -187,11 +199,11 @@ def analyze(sentence):
             "replacement_patterns_per_wh_word_matching": [
                 {
                     "wh_words": ["what", "who", "where"],
-                    "replacement": "{REVERSE_SUBJ} {VERBS} {MEOW}{C1}."
+                    "replacement": "{REVERSE_SUBJ} {MATCHED_VERBS} {MEOW}{C1}."
                 },
                 {
                     "wh_words": ["why", "which", "how"],
-                    "replacement": "{REVERSE_SUBJ} {VERBS}{C1} {MEOW}."  # TODO: MATCH VERB TO REVERSE_SUBJ
+                    "replacement": "{REVERSE_SUBJ} {MATCHED_VERBS}{C1} {MEOW}."
                 }
             ],
             "type": ENQUIRY_TYPE_OPEN_ENDED
@@ -206,10 +218,10 @@ def analyze(sentence):
             ),
             "replacement_patterns_yes_no_question": [
                 {
-                    "replacement": "Yes, {REVERSE_SUBJ} {DO}{NOT1}{NOT2} {VERBS}{C1}, {MEOW}."
+                    "replacement": "Yes, {REVERSE_SUBJ} {DO}{NOT1}{NOT2} {MATCHED_VERBS}{C1}, {MEOW}."
                 },
                 {
-                    "replacement": "No, {REVERSE_SUBJ} {DO}{NOT1}{NOT2} not {VERBS}{C1}, {MEOW}."  # TODO: MATCH VERB TO REVERSE_SUBJ
+                    "replacement": "No, {REVERSE_SUBJ} {DO}{NOT1}{NOT2} not {MATCHED_VERBS}{C1}, {MEOW}."
                 }  # yes this can cause "No, I do not not like it, meow." to be answered
             ],
             "type": ENQUIRY_TYPE_YES_NO_WITH_RAND_ANS
@@ -312,13 +324,23 @@ def analyze(sentence):
         reverse_be = be  # fallback default
         if reverse_subject in REVERSE_BE_BY_REVERSE_SUBJ.keys():
             reverse_be = REVERSE_BE_BY_REVERSE_SUBJ[reverse_subject]
+    matched_verbs = None  # MATCHED_VERBS is matched to the REVERSE_SUBJECT (and English is simple so only third person is paid attention to)
+    if "verbs" in res.groupdict().keys():
+        verbs = res.group("verbs")
+        matched_verbs = verbs  # fallback output
+        if reverse_subject in ("he", "she", "it"):
+            l = matched_verbs.split(" ")
+            l[0] = conjugate_to_third_person(l[0])
+            matched_verbs = " ".join(l)
     if reverse_subject is None:
         reverse_subject = "MISSING_REVERSE_SUBJECT"
     if reverse_be is None:
         reverse_be = "MISSING_REVERSE_BE"
+    if matched_verbs is None:
+        reverse_be = "MISSING_MATCHED_VERBS"
     string_substitutions["{REVERSE_SUBJ}"] = reverse_subject
     string_substitutions["{REVERSE_BE}"] = reverse_be
-    # TODO: VERB REVERSE
+    string_substitutions["{MATCHED_VERBS}"] = matched_verbs
     # 4. SUBSTITUTE TO REPLACEMENT PATTERN
     result = replacement_pattern
     for name, val in string_substitutions.items():
