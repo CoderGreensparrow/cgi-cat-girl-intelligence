@@ -183,7 +183,7 @@ def analyze(sentence):
                     "replacement": "{REVERSE_SUBJ} {REVERSE_BE}{C1}{LASTGERINF} {MEOW}{C2}."
                 },
                 {
-                    "wh_words": ["why", "which", "how"],
+                    "wh_words": ["why", "which", "how", "when"],
                     "replacement": "{REVERSE_SUBJ} {REVERSE_BE}{C1}{LASTGERINF}{C2} {MEOW}."
                 }  # lastgerinf is last gerund or infinitive.
             ],
@@ -202,7 +202,7 @@ def analyze(sentence):
                     "replacement": "{REVERSE_SUBJ} {MATCHED_VERBS} {MEOW}{C1}."
                 },
                 {
-                    "wh_words": ["why", "which", "how"],
+                    "wh_words": ["why", "which", "how", "when"],
                     "replacement": "{REVERSE_SUBJ} {MATCHED_VERBS}{C1} {MEOW}."
                 }
             ],
