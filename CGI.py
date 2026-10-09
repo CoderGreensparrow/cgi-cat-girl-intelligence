@@ -351,7 +351,8 @@ def analyze(sentence):
 
 STYLING = {  # substitutions are processed in order of listing, so order matters
     "casual": ["lower", {".": "", ",": "", " do not ": " don't ", " does not ": " doesn't ", "i am ": "i'm ", " you are ": " you're "}],
-    "nyaa": ["lower", {".": "", ",": "", "meow": "nyaa", "na": "nya", "ne": "nye", "ni": "nyi", "no": "nyo", "nu": "nyu"}],
+    "nyaa": ["lower", {".": "", ",": "", " do not ": " don't ", " does not ": " doesn't ", "i am ": "i'm ", " you are ": " you're ",
+                       "meow": "nyaa", "na": "nya", "ne": "nye", "ni": "nyi", "no": "nyo", "nu": "nyu"}],
     "lolcat": ["upper", {".": "", ",": " ",
                          "S": "Z", "BECAUZE": "BECOS", " A ": " ", " THE ": " A ", " LIKE ": " LIEK ", "ER ": "UR ", " YOU ": " U ",
                          "TH ": "F ", "THIN": "FIN", " DO NOT ": " DONT ", "ING": "IN", "?": " PLZ?", "PLEASE": "PLZ",
