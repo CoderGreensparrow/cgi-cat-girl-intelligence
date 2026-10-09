@@ -171,7 +171,7 @@ def analyze(sentence):
     ENQUIRY_TYPE_YES_NO_WITH_RAND_ANS = "yes/no question, random answer"
     REGEX = [
         {
-            "ID": "WH BE SUBJ C1? INFINITIVE? C2?",
+            "ID": "WH BE SUBJ C1? LASTGERINF? C2?",
             "regex": re.compile(
                 # v0.1.1: r"^(?P<wh>Wh(?:at|o|en|ere|y|ich)|How)\s+(?P<be>am|are|is)\s+(?P<subj>I|you|s?he|it|we|they|this|that|the\s+\S+(?:\s+of\s+(?:the\s+)?\S+)?)(?:(?P<c1>(?:\s+\S+)*(?=\s+\w+ing))?(?P<ing>\s+\w+ing)?(?P<c2>(?:\s+\S+)*)(?<!\?))\??$",
                 r"^(?P<wh>Wh(?:at|o|en|ere|y|ich)|How)\s+(?P<be>am|are|is)\s+(?P<subj>I|you|s?he|it|we|they|this|that|the\s+\S+(?:\s+of\s+(?:the\s+)?\S+)?)(?:(?P<c1>(?:\s+\S+)*(?=\s+\w{2,}ing|\s+to\s+\w{2,}))?(?P<lastgerinf>\s+\w{2,}ing|\s+to\s+\w{2,})?(?P<c2>(?:\s+\S+)*)(?<!\?))\??$",
@@ -349,16 +349,76 @@ def analyze(sentence):
     result = result[0].upper() + result[1:]
     return result
 
+STYLING = {  # substitutions are processed in order of listing, so order matters
+    "casual": ["lower", {".": "", ",": ""}],
+    "nyaa": ["lower", {".": "", ",": "", "meow": "nyaa", "na": "nya", "ne": "nye", "ni": "nyi", "no": "nyo", "nu": "nyu"}],
+    "lolcat": ["upper", {".": "", ",": " ",
+                         "S": "Z", "BECAUZE": "BECOS", " A ": " ", " THE ": " A ", " LIKE ": " LIEK ", "ER ": "UR ", " YOU ": " U ",
+                         "TH ": "F ", "THIN": "FIN", " DO NOT ": " DONT ", "ING": "IN", "?": " PLZ?", "PLEASE": "PLZ",
+                         " HAVE ": " HAZ ", " AM ": " IS%% ", " ARE ": " IS%% ", " IS ": " R ", "Y ": "IE ",
+                         "%%": ""}]  # source: https://lingojam.com/LOLcatTranslator
+    # more substitutions can also be entered later
+}
+def stylize(result, style):
+    if style in STYLING:
+        data = STYLING[style]
+        if data[0] == "lower":
+            stylized = result.lower()
+        elif data[0] == "upper":
+            stylized = result.upper()
+        else:
+            stylized = result
+        for from_, to in data[1].items():
+            stylized = stylized.replace(from_, to)
+    else:
+        return result
+    return stylized
+
+def full_response(in_: str, style: str) -> str:
+    return stylize(analyze(in_), style)
 
 def main():
     print(f"=== CGI (Cat Girl Intelligence) {VERSION_} ===")
-    print("Type '\\help' for more information.")
+    print("Type '\\help' for general information AND the accepted sentence types. It's recommended to start with this.\n"
+          "Type '\\help commands' to get a list of commands (things starting with '\\').\n"
+          "Type '\\help <insert command name here without the '\\'> to get information about a specific command.")
+    style = 'grammatical'
+
+    print(f"Current speaking style: {style}. (Use the '\\style' command to change the style.)")
     while True:
         in_ = input("> ")
-        if in_ == "\\help":
-            print("There are two grammatical structures supported:\n"
+        args = in_.split(" ")
+        command = args[0]
+        args.pop(0)  # args are indexed from 0
+        if command == "\\help":
+            if len(args) >= 1:
+                if args[0] == "commands":
+                    print("COMMAND LIST\n"
+                          "\\help <parameter>\t Prints help messages.\n"
+                          "                  \t If no parameter is given, it prints the default help message containing ACCEPTED SENTENCE STRUCTURES.\n"
+                          "                  \t If 'command' is written in the parameter, then it prints this list.\n"
+                          "                  \t Placing a command's name in the parameter *without the backslash ('\\') will write out the help info for that command, like accepted parameter values.\n"
+                          "                  \t (Note: There is no '\\help help'.)\n"
+                          "\\style <style name>\t Switches CGI's way of speaking. Default is 'grammatical'. For the list of styles type '\\help style'.")
+                elif args[0] == "style":
+                    print("STYLE HELP\n"
+                          "CGI can talk in multiple manners.\n"
+                          "Sentences are processed normally at first, and then these styles are applied like filters on text.\n"
+                          "The default is 'grammatical', which shows the raw processing result.\n"
+                          "- grammatical: A more grammatical (to a certain extent) way to talk with attention to punctuation and capitalization.\n"
+                          "- casual: Same as grammatical, but everything is in lowercase and there are no full stops or commas used.\n"
+                          "- nyaa: Same as casual, but every instance of 'meow' is replaced with 'nyaa' and 'n+vowel' sequences are 'ny+vowel'.\n"
+                          "- lolcat: (simplified lolcat) Same as casual, but everything is in UPPERCASE, and certain sequences of characters are replaced\n"
+                          "          with homophone sequences which are used by LOLCAT memes. The end result may not be correct in lolspeak, but it's something.")
+                else:
+                    print("Unknown parameter for command '\\help'.")
+            else:
+                print("** There are multiple commands that can be used.\n"
+                      "** Use '\\help commands' for a comprehensive list of commands.\n\n"
+                  "There are two grammatical structures supported:\n"
     "- WH-QUESTION BE[CONJUGATED] SUBJECT (COMPLEMENT1) (the last -ING VERB OR last INFINITIVE with to) (COMPLEMENT2) (question mark)\n"
     "- WH-QUESTION DO[CONJUGATED] SUBJECT VERBS[any singular word, conjugating it is not yet implemented + -ing verb or infinitive with to] (COMPLEMENT) (question mark)\n"
+    "- DO[CONJUGATED]('NT) SUBJECT (NOT) VERB (COMPLEMENT1) (same as above one, but without WH and with NOT support)"
                   "WH-QUESTIONS supported: what, who, where, why, when, which, how\n"
                   "SUBJECTs supported: all personal pronouns in base form, this, that, the X (of (the) Y)\n"
                   "'Complement' just means that the software will match the rest of the words in that region regardless of their meaning.\n"
@@ -378,9 +438,22 @@ def main():
                   "(if you end a sentence with ; it will also ask back 'Meow;').\n"
                   "Again, you could say this is a bug, but it's not a bug, it's a feature.\n\n"
                   "Have fun!\n"
-                  "\tNote: If you would like to play with a better chatbot akin to this one that doesn't use LLMs, check out the ELIZA program from 1966.")
+                  "[Note: If you would like to play with a better chatbot akin to this one that doesn't use LLMs, check out the ELIZA program from 1966.]")
+        elif command == "\\style":
+            if len(args) >= 1:
+                style = args[0]
+                print(f"Current speaking style: {style}. (If this is not programmed in the stylize() function, then 'grammatical' is used.)")
+            else:
+                print(f"ERROR: No style given. Please include a valid stylename after the command name. Current speaking style: {style}.")
+        elif command == "\\cat":
+            print("ENTERING CAT MODE TYPE 'no cat' TO DO NOT THE CAT" + "".join([random.choice("!!!!!!!!!!!!!!!!!!!!!!!!!!1111111111111123456789QWERTZYUIOPAJDNLCM") for i in range(random.randrange(4, 15))]))
+            while (__:=input()) != "no cat":
+                print(__)
+            print("This was the 'cat' command easter egg.")
+        elif command.startswith("\\"):
+            print("Unknown command. Type '\\help commands' for a comprehensive list of commands.")
         else:
-            print(analyze(in_))
+            print(full_response(in_, style))
 
 
 if __name__ == "__main__":
