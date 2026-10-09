@@ -1,5 +1,5 @@
 # FILE: CGI (Cat Girl Intelligence)
-VERSION_ = "prototype v0.1.3"
+VERSION_ = "prototype v0.1.4"
 
 """
 SPECIFICATION:
@@ -414,7 +414,7 @@ def main():
                 elif args[0] == "exit":
                     print("EXIT HELP\n"
                           "Exits the program.\n"
-                          "No, I will not tell you what easter eggs exist in the help documentation.")
+                          "No, I will not tell you what easter eggs exist.\n")
                 else:
                     print("Unknown parameter for command '\\help'.")
             else:
