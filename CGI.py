@@ -423,7 +423,7 @@ def main():
                   "There are two grammatical structures supported:\n"
     "- WH-QUESTION BE[CONJUGATED] SUBJECT (COMPLEMENT1) (the last -ING VERB OR last INFINITIVE with to) (COMPLEMENT2) (question mark)\n"
     "- WH-QUESTION DO[CONJUGATED] SUBJECT VERBS[any singular word, conjugating it is not yet implemented + -ing verb or infinitive with to] (COMPLEMENT) (question mark)\n"
-    "- DO[CONJUGATED]('NT) SUBJECT (NOT) VERB (COMPLEMENT1) (same as above one, but without WH and with NOT support)"
+    "- DO[CONJUGATED]('NT) SUBJECT (NOT) VERB (COMPLEMENT1) (same as above one, but without WH and with NOT support)\n"
                   "WH-QUESTIONS supported: what, who, where, why, when, which, how\n"
                   "SUBJECTs supported: all personal pronouns in base form, this, that, the X (of (the) Y)\n"
                   "'Complement' just means that the software will match the rest of the words in that region regardless of their meaning.\n"
