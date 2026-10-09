@@ -218,10 +218,10 @@ def analyze(sentence):
             ),
             "replacement_patterns_yes_no_question": [
                 {
-                    "replacement": "Yes, {REVERSE_SUBJ} {DO}{NOT1}{NOT2} {MATCHED_VERBS}{C1}, {MEOW}."
+                    "replacement": "Yes, {REVERSE_SUBJ} {DO}{NOT1}{NOT2} {VERBS}{C1}, {MEOW}."
                 },
                 {
-                    "replacement": "No, {REVERSE_SUBJ} {DO}{NOT1}{NOT2} not {MATCHED_VERBS}{C1}, {MEOW}."
+                    "replacement": "No, {REVERSE_SUBJ} {DO}{NOT1}{NOT2} not {VERBS}{C1}, {MEOW}."
                 }  # yes this can cause "No, I do not not like it, meow." to be answered
             ],
             "type": ENQUIRY_TYPE_YES_NO_WITH_RAND_ANS
@@ -350,7 +350,7 @@ def analyze(sentence):
     return result
 
 STYLING = {  # substitutions are processed in order of listing, so order matters
-    "casual": ["lower", {".": "", ",": ""}],
+    "casual": ["lower", {".": "", ",": "", " do not ": " don't ", " does not ": " doesn't ", "i am ": "i'm ", " you are ": " you're "}],
     "nyaa": ["lower", {".": "", ",": "", "meow": "nyaa", "na": "nya", "ne": "nye", "ni": "nyi", "no": "nyo", "nu": "nyu"}],
     "lolcat": ["upper", {".": "", ",": " ",
                          "S": "Z", "BECAUZE": "BECOS", " A ": " ", " THE ": " A ", " LIKE ": " LIEK ", "ER ": "UR ", " YOU ": " U ",
@@ -452,7 +452,7 @@ def main():
             print("This was the 'cat' command easter egg.")
         elif command.startswith("\\"):
             print("Unknown command. Type '\\help commands' for a comprehensive list of commands.")
-        else:
+        else:  # ACTUAL RESPONSE
             print(full_response(in_, style))
 
 
