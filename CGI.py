@@ -1,5 +1,5 @@
 # FILE: CGI (Cat Girl Intelligence)
-VERSION_ = "prototype v0.1.2"
+VERSION_ = "prototype v0.1.3"
 
 """
 SPECIFICATION:
