@@ -399,7 +399,8 @@ def main():
                           "                  \t If 'command' is written in the parameter, then it prints this list.\n"
                           "                  \t Placing a command's name in the parameter *without the backslash ('\\') will write out the help info for that command, like accepted parameter values.\n"
                           "                  \t (Note: There is no '\\help help'.)\n"
-                          "\\style <style name>\t Switches CGI's way of speaking. Default is 'grammatical'. For the list of styles type '\\help style'.")
+                          "\\style <style name>\t Switches CGI's way of speaking. Default is 'grammatical'. For the list of styles type '\\help style'.\n"
+                          "\\exit\t Exits the program.")
                 elif args[0] == "style":
                     print("STYLE HELP\n"
                           "CGI can talk in multiple manners.\n"
@@ -410,6 +411,10 @@ def main():
                           "- nyaa: Same as casual, but every instance of 'meow' is replaced with 'nyaa' and 'n+vowel' sequences are 'ny+vowel'.\n"
                           "- lolcat: (simplified lolcat) Same as casual, but everything is in UPPERCASE, and certain sequences of characters are replaced\n"
                           "          with homophone sequences which are used by LOLCAT memes. The end result may not be correct in lolspeak, but it's something.")
+                elif args[0] == "exit":
+                    print("EXIT HELP\n"
+                          "Exits the program.\n"
+                          "No, I will not tell you what easter eggs exist in the help documentation.")
                 else:
                     print("Unknown parameter for command '\\help'.")
             else:
@@ -450,6 +455,9 @@ def main():
             while (__:=input()) != "no cat":
                 print(__)
             print("This was the 'cat' command easter egg.")
+        elif command == "\\exit":
+            print("Exiting.")
+            return
         elif command.startswith("\\"):
             print("Unknown command. Type '\\help commands' for a comprehensive list of commands.")
         else:  # ACTUAL RESPONSE
